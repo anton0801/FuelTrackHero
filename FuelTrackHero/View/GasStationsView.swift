@@ -1,108 +1,173 @@
 import SwiftUI
 
 struct GasStationsView: View {
-    @EnvironmentObject var appData: AppData
-    @State private var showingAddSheet = false
-    @State private var newName: String = ""
-    @State private var newLogo: String = "fuelpump.circle"
-    @State private var editingStation: GasStation?
+    @EnvironmentObject var firebaseService: FirebaseService
+    @State private var showingAddStation = false
+    @State private var newStationName = ""
     
     var body: some View {
         NavigationView {
-            List {
-                ForEach(appData.gasStations) { station in
-                    HStack(spacing: 16) {
-                        Image(systemName: station.logo)
-                            .font(.title)
-                            .foregroundStyle(LinearGradient(gradient: Gradient(colors: [.metalGray, .whiteHighlight]), startPoint: .top, endPoint: .bottom))
-                            .shadow(color: Color.shadowBlack, radius: 3)
-                        
-                        VStack(alignment: .leading) {
-                            Text(station.name)
-                                .font(.headline)
-                                .foregroundColor(.purpleNeon)
-                            Text("Avg Price: \(station.averagePrice.formatted(to: 2)) \(appData.settings.currency)")
-                                .font(.subheadline)
-                                .foregroundColor(.orangeGloss)
-                            Text("Avg Cons: \(station.averageConsumption.formatted(to: 1)) \(appData.settings.consumptionUnit)")
-                                .font(.subheadline)
-                                .foregroundColor(.goldenNeon)
+            ZStack {
+                AsphaltBackground()
+                
+                ScrollView {
+                    LazyVStack(spacing: 12) {
+                        ForEach(firebaseService.gasStations) { station in
+                            GasStationCard(station: station)
+                                .padding(.horizontal)
                         }
                     }
-                    .padding(12)
-                    .background(Color.shadowBlack.cornerRadius(15))
-                    .overlay(RoundedRectangle(cornerRadius: 15).stroke(Color.turquoiseLight.opacity(0.2)))
-                    .onTapGesture {
-                        editingStation = station
-                        newName = station.name
-                        newLogo = station.logo
-                        showingAddSheet = true
-                    }
-                }
-                .onDelete { indices in
-                    appData.gasStations.remove(atOffsets: indices)
+                    .padding(.top, 20)
+                    .padding(.bottom, 100)
                 }
             }
-            .listStyle(.plain)
             .navigationTitle("Gas Stations")
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                            Button("Add") {
-                                editingStation = nil
-                                newName = ""
-                                newLogo = "fuelpump.circle"
-                                showingAddSheet = true
-                            }
-                            .font(.headline)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 10)
-                            .background(LinearGradient(gradient: Gradient(colors: [.turquoiseLight, .purpleNeon]), startPoint: .topLeading, endPoint: .bottomTrailing))
-                            .cornerRadius(10)
-                            .shadow(color: .turquoiseLight.opacity(0.7), radius: 6)
-                        }
-            .background(Color.asphaltBlack.ignoresSafeArea())
-            .sheet(isPresented: $showingAddSheet) {
-                VStack(spacing: 20) {
-                    Text(editingStation == nil ? "Add Gas Station" : "Edit Gas Station")
-                        .font(.title2)
-                        .foregroundColor(.purpleNeon)
-                    
-                    TextField("Name", text: $newName)
-                        .textFieldStyle(RoundedBorderTextFieldStyle())
-                    
-                    Picker("Logo", selection: $newLogo) {
-                        Image(systemName: "fuelpump.circle").tag("fuelpump.circle")
-                        Image(systemName: "fuelpump.fill").tag("fuelpump.fill")
-                        Image(systemName: "bolt.car.fill").tag("bolt.car.fill")
-                        // Add more SF symbols
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button(action: { showingAddStation = true }) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 24))
+                            .foregroundColor(Color(hex: "#3ED4C9"))
                     }
-                    .pickerStyle(.wheel)
-                    .frame(height: 150)
-                    
-                    Button(editingStation == nil ? "Add" : "Save") {
-                        if let editing = editingStation,
-                           let index = appData.gasStations.firstIndex(where: { $0.id == editing.id }) {
-                            appData.gasStations[index].name = newName
-                            appData.gasStations[index].logo = newLogo
-                        } else {
-                            appData.gasStations.append(GasStation(name: newName, logo: newLogo))
-                        }
-                        showingAddSheet = false
-                    }
-                    .font(.headline)
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(Color.turquoiseLight)
-                    .cornerRadius(10)
-                    .shadow(color: .turquoiseLight.opacity(0.5), radius: 5)
                 }
-                .padding()
-                .background(Color.asphaltBlack)
+            }
+            .sheet(isPresented: $showingAddStation) {
+                AddGasStationView()
             }
         }
-        .navigationViewStyle(.stack)
     }
 }
 
-#Preview {
-    GasStationsView()
+struct GasStationCard: View {
+    let station: GasStation
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: station.logo)
+                    .font(.system(size: 32))
+                    .foregroundColor(Color(hex: "#3ED4C9"))
+                    .frame(width: 50, height: 50)
+                    .background(
+                        Circle()
+                            .fill(Color(hex: "#2A2A2A"))
+                    )
+                
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(station.name)
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+                    
+                    Text("\(station.refuelingCount) refuelings")
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .foregroundColor(.white.opacity(0.6))
+                }
+                
+                Spacer()
+            }
+            
+            Divider()
+                .background(Color.white.opacity(0.1))
+            
+            HStack(spacing: 20) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Avg. Price")
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                        .foregroundColor(.white.opacity(0.6))
+                    
+                    Text("€\(station.averagePrice.formatted(digits: 2))/L")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundColor(Color(hex: "#FFD84A"))
+                }
+                
+                if station.averageConsumption > 0 {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Avg. Consumption")
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .foregroundColor(.white.opacity(0.6))
+                        
+                        Text("\(station.averageConsumption.formatted(digits: 1)) L/100km")
+                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .foregroundColor(Color(hex: "#3ED4C9"))
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(hex: "#2A2A2A"))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(Color(hex: "#3ED4C9").opacity(0.3), lineWidth: 1)
+                )
+        )
+    }
+}
+
+struct AddGasStationView: View {
+    @Environment(\.presentationMode) var presentationMode
+    @EnvironmentObject var firebaseService: FirebaseService
+    @State private var stationName = ""
+    @State private var selectedIcon = "fuelpump.circle.fill"
+    
+    let availableIcons = [
+        "fuelpump.circle.fill",
+        "mappin.circle.fill",
+        "flag.circle.fill",
+        "star.circle.fill",
+        "bolt.circle.fill"
+    ]
+    
+    var body: some View {
+        NavigationView {
+            Form {
+                Section(header: Text("Station Details")) {
+                    TextField("Station Name", text: $stationName)
+                }
+                
+                Section(header: Text("Icon")) {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 16) {
+                            ForEach(availableIcons, id: \.self) { icon in
+                                Button(action: { selectedIcon = icon }) {
+                                    Image(systemName: icon)
+                                        .font(.system(size: 32))
+                                        .foregroundColor(selectedIcon == icon ? Color(hex: "#3ED4C9") : .gray)
+                                        .frame(width: 50, height: 50)
+                                }
+                            }
+                        }
+                        .padding(.vertical, 8)
+                    }
+                }
+            }
+            .navigationTitle("Add Station")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        presentationMode.wrappedValue.dismiss()
+                    }
+                }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        saveStation()
+                    }
+                    .disabled(stationName.isEmpty)
+                }
+            }
+        }
+    }
+    
+    private func saveStation() {
+        let station = GasStation(name: stationName, logo: selectedIcon)
+        firebaseService.addGasStation(station) { success in
+            if success {
+                presentationMode.wrappedValue.dismiss()
+            }
+        }
+    }
 }

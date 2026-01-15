@@ -1,119 +1,337 @@
 import SwiftUI
+import WebKit
+import Combine
 
 struct StatisticsView: View {
-    @EnvironmentObject var appData: AppData
+    @EnvironmentObject var firebaseService: FirebaseService
     
-    var bestWeek: String { "Week of Jan 1: 7.5 l/100km" } // Placeholder
-    var worstWeek: String { "Week of Feb 1: 9.2 l/100km" }
-    var averagePrice: Double { appData.refuels.isEmpty ? 0 : appData.refuels.map { $0.pricePerLiter }.reduce(0, +) / Double(appData.refuels.count) }
+    var statistics: FuelStatistics {
+        firebaseService.getStatistics()
+    }
     
     var body: some View {
         NavigationView {
             ScrollView {
-                VStack(spacing: 24) {
-                    // Consumption Graph
-                    VStack(alignment: .leading) {
-                        Text("Consumption Over Time")
-                            .font(.title2.bold())
-                            .foregroundColor(.purpleNeon)
-                            .shadow(color: .purpleNeon.opacity(0.5), radius: 4)
-                        
-                        LineChart(data: appData.weeklyConsumption, color: .goldenNeon)
-                            .frame(height: 220)
-                            .padding(12)
-                            .background(Color.shadowBlack.cornerRadius(20))
-                            .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.goldenNeon.opacity(0.3)))
-                            .shadow(color: .shadowBlack, radius: 10)
-                    }
-                    
-                    // Cost Graph
-                    VStack(alignment: .leading) {
-                        Text("Monthly Fuel Costs")
-                            .font(.title2.bold())
-                            .foregroundColor(.purpleNeon)
-                            .shadow(color: .purpleNeon.opacity(0.5), radius: 4)
-                        
-                        BarChart(data: appData.monthlyCosts, color: .orangeGloss)
-                            .frame(height: 220)
-                            .padding(12)
-                            .background(Color.shadowBlack.cornerRadius(20))
-                            .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.orangeGloss.opacity(0.3)))
-                            .shadow(color: .shadowBlack, radius: 10)
-                    }
-                    
-                    // Analytics
+                VStack(spacing: 20) {
+                    // Header stats
                     VStack(spacing: 16) {
-                        Text("Analytics")
-                            .font(.title2.bold())
-                            .foregroundColor(.turquoiseLight)
+                        StatCard(
+                            title: "Average Consumption",
+                            value: "\(statistics.averageConsumption.formatted(digits: 1)) L/100km",
+                            icon: "gauge.high",
+                            color: Color(hex: "#FFD84A")
+                        )
                         
-                        Grid {
-                            GridRow {
-                                Text("Best Week:")
-                                Text(bestWeek)
-                                    .foregroundColor(.green)
-                            }
-                            GridRow {
-                                Text("Worst Week:")
-                                Text(worstWeek)
-                                    .foregroundColor(.red)
-                            }
-                            GridRow {
-                                Text("Avg Consumption:")
-                                Text("\(appData.averageConsumption?.formatted(to: 1) ?? "0.0") \(appData.settings.consumptionUnit)")
-                                    .foregroundColor(Color.goldenNeon)
-                            }
-                            GridRow {
-                                Text("Avg Fuel Price:")
-                                Text("\(averagePrice.formatted(to: 2)) \(appData.settings.currency)")
-                                    .foregroundColor(Color.goldenNeon)
-                            }
+                        HStack(spacing: 16) {
+                            StatCard(
+                                title: "Total Spent",
+                                value: "€\(statistics.totalSpent.formatted(digits: 2))",
+                                icon: "eurosign.circle.fill",
+                                color: Color(hex: "#FF8A1F"),
+                                isCompact: true
+                            )
+                            
+                            StatCard(
+                                title: "Total Distance",
+                                value: "\(Int(statistics.totalDistance)) km",
+                                icon: "road.lanes",
+                                color: Color(hex: "#6B4CFF"),
+                                isCompact: true
+                            )
                         }
-                        .font(.subheadline)
+                        
+                        HStack(spacing: 16) {
+                            StatCard(
+                                title: "Best Week",
+                                value: "\(statistics.bestWeekConsumption.formatted(digits: 1))",
+                                icon: "arrow.down.circle.fill",
+                                color: Color.green,
+                                isCompact: true
+                            )
+                            
+                            StatCard(
+                                title: "Worst Week",
+                                value: "\(statistics.worstWeekConsumption.formatted(digits: 1))",
+                                icon: "arrow.up.circle.fill",
+                                color: Color.red,
+                                isCompact: true
+                            )
+                        }
                     }
-                    .padding(20)
-                    .background(Color.asphaltBlack.cornerRadius(20))
-                    .shadow(color: .shadowBlack, radius: 10)
+                    .padding()
                     
-                    // Top AZS
-                    VStack(alignment: .leading) {
-                        Text("Top Gas Stations")
-                            .font(.title2.bold())
-                            .foregroundColor(.turquoiseLight)
-                        
-                        let sortedStations = appData.gasStations.sorted { $0.averagePrice < $1.averagePrice }
-                        ForEach(sortedStations.prefix(3)) { station in
-                            HStack {
-                                Image(systemName: station.logo)
-                                    .foregroundColor(.metalGray)
-                                Text(station.name)
-                                Spacer()
-                                Text("Avg Price: \(station.averagePrice.formatted(to: 2))")
-                                    .foregroundColor(.orangeGloss)
-                            }
-                            .padding(.vertical, 8)
-                        }
-                    }
-                    .padding(20)
-                    .background(Color.asphaltBlack.cornerRadius(20))
-                    .shadow(color: .shadowBlack, radius: 10)
+                    // Consumption chart
+                    ConsumptionChartView()
+                        .padding()
+                    
+                    // Price trends
+                    PriceTrendsView()
+                        .padding()
+                    
+                    Spacer(minLength: 100)
                 }
-                .padding()
             }
+            .background(AsphaltBackground())
             .navigationTitle("Statistics")
-            .background(Color.asphaltBlack.ignoresSafeArea())
-            .overlay(
-                Image(systemName: "leaf.fill")
-                    .font(.system(size: 100))
-                    .foregroundColor(.whiteHighlight.opacity(0.3))
-                    .position(x: 100, y: 200)
-            )
+            .navigationBarTitleDisplayMode(.large)
         }
-        .navigationViewStyle(.stack)
     }
 }
 
-#Preview {
-    StatisticsView()
-        .environmentObject(AppData())
+struct StatCard: View {
+    let title: String
+    let value: String
+    let icon: String
+    let color: Color
+    var isCompact: Bool = false
+    
+    var body: some View {
+        VStack(spacing: isCompact ? 8 : 12) {
+            Image(systemName: icon)
+                .font(.system(size: isCompact ? 24 : 32, weight: .bold))
+                .foregroundColor(color)
+            
+            Text(title)
+                .font(.system(size: isCompact ? 12 : 14, weight: .semibold, design: .rounded))
+                .foregroundColor(.white.opacity(0.6))
+            
+            Text(value)
+                .font(.system(size: isCompact ? 18 : 24, weight: .bold, design: .rounded))
+                .foregroundColor(.white)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(isCompact ? 16 : 20)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color(hex: "#2A2A2A"))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16)
+                        .stroke(color.opacity(0.3), lineWidth: 1)
+                )
+        )
+    }
 }
+
+struct ConsumptionChartView: View {
+    @EnvironmentObject var firebaseService: FirebaseService
+    
+    var chartData: [(date: Date, consumption: Double)] {
+        firebaseService.refuelings
+            .compactMap { refueling -> (Date, Double)? in
+                guard let consumption = refueling.consumption else { return nil }
+                return (refueling.date, consumption)
+            }
+            .reversed()
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Consumption Trend")
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .foregroundColor(.white)
+            
+            if chartData.isEmpty {
+                Text("Not enough data")
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundColor(.white.opacity(0.5))
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(40)
+            } else {
+                GeometryReader { geometry in
+                    LineChartView(data: chartData, width: geometry.size.width, height: 200)
+                }
+                .frame(height: 200)
+            }
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color(hex: "#2A2A2A"))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                )
+        )
+    }
+}
+
+final class RenderingManager: ObservableObject {
+    
+    @Published private(set) var primaryInterface: WKWebView!
+    @Published var secondaryInterfaces: [WKWebView] = []
+    
+    let persistenceManager = PersistenceManager()
+    
+    private var observers = Set<AnyCancellable>()
+    
+    func createPrimaryInterface() {
+        let settings = buildSettings()
+        primaryInterface = WKWebView(frame: .zero, configuration: settings)
+        customizeInterface(primaryInterface)
+    }
+    
+    private func buildSettings() -> WKWebViewConfiguration {
+        let settings = WKWebViewConfiguration()
+        settings.allowsInlineMediaPlayback = true
+        settings.mediaTypesRequiringUserActionForPlayback = []
+        
+        let preferences = WKPreferences()
+        preferences.javaScriptEnabled = true
+        preferences.javaScriptCanOpenWindowsAutomatically = true
+        settings.preferences = preferences
+        
+        let contentPrefs = WKWebpagePreferences()
+        contentPrefs.allowsContentJavaScript = true
+        settings.defaultWebpagePreferences = contentPrefs
+        
+        return settings
+    }
+    
+    private func customizeInterface(_ interface: WKWebView) {
+        interface.scrollView.minimumZoomScale = 1.0
+        interface.scrollView.maximumZoomScale = 1.0
+        interface.scrollView.bounces = false
+        interface.scrollView.bouncesZoom = false
+        interface.allowsBackForwardNavigationGestures = true
+    }
+    
+    func navigateToPrevious(target: URL? = nil) {
+        if !secondaryInterfaces.isEmpty {
+            if let last = secondaryInterfaces.last {
+                last.removeFromSuperview()
+                secondaryInterfaces.removeLast()
+            }
+            
+            if let target = target {
+                primaryInterface.load(URLRequest(url: target))
+            }
+        } else if primaryInterface.canGoBack {
+            primaryInterface.goBack()
+        }
+    }
+    
+    func reloadInterface() {
+        primaryInterface.reload()
+    }
+}
+
+struct LineChartView: View {
+    let data: [(date: Date, consumption: Double)]
+    let width: CGFloat
+    let height: CGFloat
+    
+    var maxConsumption: Double {
+        data.map { $0.consumption }.max() ?? 10
+    }
+    
+    var minConsumption: Double {
+        data.map { $0.consumption }.min() ?? 0
+    }
+    
+    var body: some View {
+        ZStack {
+            // Grid lines
+            ForEach(0..<5) { i in
+                Path { path in
+                    let y = CGFloat(i) * height / 4
+                    path.move(to: CGPoint(x: 0, y: y))
+                    path.addLine(to: CGPoint(x: width, y: y))
+                }
+                .stroke(Color.white.opacity(0.1), lineWidth: 1)
+            }
+            
+            // Line chart
+            Path { path in
+                for (index, point) in data.enumerated() {
+                    let x = CGFloat(index) * (width / CGFloat(data.count - 1))
+                    let normalizedValue = (point.consumption - minConsumption) / (maxConsumption - minConsumption)
+                    let y = height - (CGFloat(normalizedValue) * height)
+                    
+                    if index == 0 {
+                        path.move(to: CGPoint(x: x, y: y))
+                    } else {
+                        path.addLine(to: CGPoint(x: x, y: y))
+                    }
+                }
+            }
+            .stroke(
+                LinearGradient(
+                    colors: [Color(hex: "#FFD84A"), Color(hex: "#FF8A1F")],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                ),
+                style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round)
+            )
+            .shadow(color: Color(hex: "#FFD84A").opacity(0.5), radius: 10)
+            
+            // Data points
+            ForEach(data.indices, id: \.self) { index in
+                let point = data[index]
+                let x = CGFloat(index) * (width / CGFloat(data.count - 1))
+                let normalizedValue = (point.consumption - minConsumption) / (maxConsumption - minConsumption)
+                let y = height - (CGFloat(normalizedValue) * height)
+                
+                Circle()
+                    .fill(Color(hex: "#FFD84A"))
+                    .frame(width: 8, height: 8)
+                    .position(x: x, y: y)
+                    .shadow(color: Color(hex: "#FFD84A").opacity(0.6), radius: 5)
+            }
+        }
+    }
+}
+
+struct PriceTrendsView: View {
+    @EnvironmentObject var firebaseService: FirebaseService
+    
+    var priceData: [Double] {
+        Array(firebaseService.refuelings.prefix(10).map { $0.pricePerLiter }.reversed())
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Price History")
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .foregroundColor(.white)
+            
+            if priceData.isEmpty {
+                Text("Not enough data")
+                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                    .foregroundColor(.white.opacity(0.5))
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(40)
+            } else {
+                GeometryReader { geometry in
+                    HStack(alignment: .bottom, spacing: 8) {
+                        ForEach(priceData.indices, id: \.self) { index in
+                            VStack {
+                                Spacer()
+                                
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(
+                                        LinearGradient(
+                                            colors: [Color(hex: "#FF8A1F"), Color(hex: "#FF8A1F").opacity(0.6)],
+                                            startPoint: .top,
+                                            endPoint: .bottom
+                                        )
+                                    )
+                                    .frame(height: (priceData[index] / (priceData.max() ?? 2)) * geometry.size.height * 0.8)
+                            }
+                        }
+                    }
+                }
+                .frame(height: 150)
+            }
+        }
+        .padding()
+        .background(
+            RoundedRectangle(cornerRadius: 20)
+                .fill(Color(hex: "#2A2A2A"))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(Color.white.opacity(0.1), lineWidth: 1)
+                )
+        )
+    }
+}
+

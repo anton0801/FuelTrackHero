@@ -6,14 +6,76 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		8FEFCF432F191B1500ED4750 /* AppsFlyerLib in Frameworks */ = {isa = PBXBuildFile; productRef = 8FEFCF422F191B1500ED4750 /* AppsFlyerLib */; };
+		8FEFCF462F191B8200ED4750 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 8FEFCF452F191B8200ED4750 /* FirebaseAuth */; };
+		8FEFCF482F191B8200ED4750 /* FirebaseDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = 8FEFCF472F191B8200ED4750 /* FirebaseDatabase */; };
+		8FEFCF4A2F191B8200ED4750 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 8FEFCF492F191B8200ED4750 /* FirebaseMessaging */; };
+		8FEFCF652F19253C00ED4750 /* NotificationServiceExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 8FEFCF5E2F19253C00ED4750 /* NotificationServiceExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		8FEFCF6D2F19255400ED4750 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = 8FEFCF6C2F19255400ED4750 /* FirebaseMessaging */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		8FEFCF632F19253C00ED4750 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 8FC43B872F0C22E0005983DC /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 8FEFCF5D2F19253C00ED4750;
+			remoteInfo = NotificationServiceExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		8FEFCF6A2F19253C00ED4750 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				8FEFCF652F19253C00ED4750 /* NotificationServiceExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
 		8FC43B8F2F0C22E0005983DC /* FuelTrackHero.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FuelTrackHero.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		8FEFCF5E2F19253C00ED4750 /* NotificationServiceExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = NotificationServiceExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		8FEFCF4C2F191B8C00ED4750 /* Exceptions for "FuelTrackHero" folder in "FuelTrackHero" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 8FC43B8E2F0C22E0005983DC /* FuelTrackHero */;
+		};
+		8FEFCF692F19253C00ED4750 /* Exceptions for "NotificationServiceExtension" folder in "NotificationServiceExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 8FEFCF5D2F19253C00ED4750 /* NotificationServiceExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		8FC43B912F0C22E0005983DC /* FuelTrackHero */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				8FEFCF4C2F191B8C00ED4750 /* Exceptions for "FuelTrackHero" folder in "FuelTrackHero" target */,
+			);
 			path = FuelTrackHero;
+			sourceTree = "<group>";
+		};
+		8FEFCF5F2F19253C00ED4750 /* NotificationServiceExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				8FEFCF692F19253C00ED4750 /* Exceptions for "NotificationServiceExtension" folder in "NotificationServiceExtension" target */,
+			);
+			path = NotificationServiceExtension;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -23,6 +85,18 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				8FEFCF4A2F191B8200ED4750 /* FirebaseMessaging in Frameworks */,
+				8FEFCF482F191B8200ED4750 /* FirebaseDatabase in Frameworks */,
+				8FEFCF432F191B1500ED4750 /* AppsFlyerLib in Frameworks */,
+				8FEFCF462F191B8200ED4750 /* FirebaseAuth in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8FEFCF5B2F19253C00ED4750 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				8FEFCF6D2F19255400ED4750 /* FirebaseMessaging in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -33,6 +107,8 @@
 			isa = PBXGroup;
 			children = (
 				8FC43B912F0C22E0005983DC /* FuelTrackHero */,
+				8FEFCF5F2F19253C00ED4750 /* NotificationServiceExtension */,
+				8FEFCF6B2F19255400ED4750 /* Frameworks */,
 				8FC43B902F0C22E0005983DC /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,8 +117,16 @@
 			isa = PBXGroup;
 			children = (
 				8FC43B8F2F0C22E0005983DC /* FuelTrackHero.app */,
+				8FEFCF5E2F19253C00ED4750 /* NotificationServiceExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		8FEFCF6B2F19255400ED4750 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -55,20 +139,49 @@
 				8FC43B8B2F0C22E0005983DC /* Sources */,
 				8FC43B8C2F0C22E0005983DC /* Frameworks */,
 				8FC43B8D2F0C22E0005983DC /* Resources */,
+				8FEFCF6A2F19253C00ED4750 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				8FEFCF642F19253C00ED4750 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				8FC43B912F0C22E0005983DC /* FuelTrackHero */,
 			);
 			name = FuelTrackHero;
 			packageProductDependencies = (
+				8FEFCF422F191B1500ED4750 /* AppsFlyerLib */,
+				8FEFCF452F191B8200ED4750 /* FirebaseAuth */,
+				8FEFCF472F191B8200ED4750 /* FirebaseDatabase */,
+				8FEFCF492F191B8200ED4750 /* FirebaseMessaging */,
 			);
 			productName = FuelTrackHero;
 			productReference = 8FC43B8F2F0C22E0005983DC /* FuelTrackHero.app */;
 			productType = "com.apple.product-type.application";
+		};
+		8FEFCF5D2F19253C00ED4750 /* NotificationServiceExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8FEFCF662F19253C00ED4750 /* Build configuration list for PBXNativeTarget "NotificationServiceExtension" */;
+			buildPhases = (
+				8FEFCF5A2F19253C00ED4750 /* Sources */,
+				8FEFCF5B2F19253C00ED4750 /* Frameworks */,
+				8FEFCF5C2F19253C00ED4750 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				8FEFCF5F2F19253C00ED4750 /* NotificationServiceExtension */,
+			);
+			name = NotificationServiceExtension;
+			packageProductDependencies = (
+				8FEFCF6C2F19255400ED4750 /* FirebaseMessaging */,
+			);
+			productName = NotificationServiceExtension;
+			productReference = 8FEFCF5E2F19253C00ED4750 /* NotificationServiceExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -83,6 +196,9 @@
 					8FC43B8E2F0C22E0005983DC = {
 						CreatedOnToolsVersion = 16.4;
 					};
+					8FEFCF5D2F19253C00ED4750 = {
+						CreatedOnToolsVersion = 16.4;
+					};
 				};
 			};
 			buildConfigurationList = 8FC43B8A2F0C22E0005983DC /* Build configuration list for PBXProject "FuelTrackHero" */;
@@ -94,18 +210,30 @@
 			);
 			mainGroup = 8FC43B862F0C22E0005983DC;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				8FEFCF412F191B1500ED4750 /* XCRemoteSwiftPackageReference "AppsFlyerFramework" */,
+				8FEFCF442F191B8200ED4750 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 8FC43B902F0C22E0005983DC /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
 				8FC43B8E2F0C22E0005983DC /* FuelTrackHero */,
+				8FEFCF5D2F19253C00ED4750 /* NotificationServiceExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		8FC43B8D2F0C22E0005983DC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8FEFCF5C2F19253C00ED4750 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -122,7 +250,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		8FEFCF5A2F19253C00ED4750 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		8FEFCF642F19253C00ED4750 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 8FEFCF5D2F19253C00ED4750 /* NotificationServiceExtension */;
+			targetProxy = 8FEFCF632F19253C00ED4750 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		8FC43B992F0C22E2005983DC /* Debug */ = {
@@ -249,8 +392,11 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FuelTrackHero/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Fuel Track Hero";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Allow to use in application";
+				INFOPLIST_KEY_NSUserTrackingUsageDescription = "Fuel Track Hero may access limited device-level information to ensure accurate tracking features and stable app operation. This data is used to monitor performance, improve reliability, and enhance core functionality. We do not use this information to track users across other apps or services, and it is never shared for third-party advertising.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -265,7 +411,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.3;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ctrackheroapp.FuelTrackHero;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -289,8 +435,11 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = FuelTrackHero/Info.plist;
 				INFOPLIST_KEY_CFBundleDisplayName = "Fuel Track Hero";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Allow to use in application";
+				INFOPLIST_KEY_NSUserTrackingUsageDescription = "Fuel Track Hero may access limited device-level information to ensure accurate tracking features and stable app operation. This data is used to monitor performance, improve reliability, and enhance core functionality. We do not use this information to track users across other apps or services, and it is never shared for third-party advertising.";
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -305,7 +454,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
 				MACOSX_DEPLOYMENT_TARGET = 15.3;
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				PRODUCT_BUNDLE_IDENTIFIER = com.ctrackheroapp.FuelTrackHero;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -316,6 +465,67 @@
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
 				XROS_DEPLOYMENT_TARGET = 2.5;
+			};
+			name = Release;
+		};
+		8FEFCF672F19253C00ED4750 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = NotificationServiceExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = NotificationServiceExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ctrackheroapp.FuelTrackHero.NotificationServiceExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		8FEFCF682F19253C00ED4750 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = NotificationServiceExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = NotificationServiceExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.ctrackheroapp.FuelTrackHero.NotificationServiceExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
 		};
@@ -340,7 +550,63 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		8FEFCF662F19253C00ED4750 /* Build configuration list for PBXNativeTarget "NotificationServiceExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				8FEFCF672F19253C00ED4750 /* Debug */,
+				8FEFCF682F19253C00ED4750 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		8FEFCF412F191B1500ED4750 /* XCRemoteSwiftPackageReference "AppsFlyerFramework" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/AppsFlyerSDK/AppsFlyerFramework";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 6.17.8;
+			};
+		};
+		8FEFCF442F191B8200ED4750 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.8.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		8FEFCF422F191B1500ED4750 /* AppsFlyerLib */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8FEFCF412F191B1500ED4750 /* XCRemoteSwiftPackageReference "AppsFlyerFramework" */;
+			productName = AppsFlyerLib;
+		};
+		8FEFCF452F191B8200ED4750 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8FEFCF442F191B8200ED4750 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		8FEFCF472F191B8200ED4750 /* FirebaseDatabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8FEFCF442F191B8200ED4750 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseDatabase;
+		};
+		8FEFCF492F191B8200ED4750 /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8FEFCF442F191B8200ED4750 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
+		};
+		8FEFCF6C2F19255400ED4750 /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 8FEFCF442F191B8200ED4750 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 8FC43B872F0C22E0005983DC /* Project object */;
 }
