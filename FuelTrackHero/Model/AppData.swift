@@ -649,7 +649,7 @@ enum NetworkError: Error {
 struct DeviceInfo {
     
     static var bundleID: String {
-        return "com.birdcarelog.app"
+        return "com.ctrackheroapp.FuelTrackHero"
     }
     
     static var firebaseProject: String? {
