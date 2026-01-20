@@ -2,7 +2,7 @@ import SwiftUI
 
 struct PermissionRequestView: View {
     
-    @EnvironmentObject var controller: ApplicationController
+    @EnvironmentObject var controller: ApplicationMediator
     @State private var animating = false
     
     var body: some View {
@@ -75,7 +75,7 @@ struct PermissionRequestView: View {
     private var buttonArea1: some View {
         VStack(spacing: 0) {
             Button(action: {
-                controller.acceptPermissionRequest()
+                controller.grantPermission()
             }) {
                 Image("accept")
                     .resizable()
@@ -86,7 +86,7 @@ struct PermissionRequestView: View {
     
     private var buttonArea2: some View {
         Button(action: {
-            controller.dismissPermissionRequest()
+            controller.rejectPermission()
         }) {
             Text("Skip")
                 .font(.custom("BagelFatOne-Regular", size: 15))

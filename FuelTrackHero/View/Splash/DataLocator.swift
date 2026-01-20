@@ -25,150 +25,156 @@ final class ServiceLocator {
 }
 
 @MainActor
-final class ApplicationController: ObservableObject {
+final class ApplicationMediator: ObservableObject {
     
-    @Published private(set) var displayMode: DisplayMode = .loading
-    @Published private(set) var targetEndpoint: String?
+    @Published private(set) var renderMode: RenderMode = .loading
+    @Published private(set) var targetURL: String?
     @Published private(set) var showPermissionRequest = false
     
-    private let pipeline = StatePipeline()
-    private let storage: StorageService
-    private let network: NetworkService
-    private var connectivity: ConnectivityService
+    private let phaseMachine: PhaseMachine
+    private let storage: StorageMediator
+    private let network: NetworkMediator
+    private var connectivity: ConnectivityMediator
     
     private var subscriptions = Set<AnyCancellable>()
-    private var timeoutTask: DispatchWorkItem?
-    private var isActivated = false
+    private var timeoutWork: DispatchWorkItem?
+    private var sealed = false
     
     init(
-        storage: StorageService = UserDefaultsStorage(),
-        network: NetworkService = HTTPNetworkService(),
-        connectivity: ConnectivityService = ReachabilityService()
+        phaseMachine: PhaseMachine = PhaseMachine(),
+        storage: StorageMediator = LocalStorage(),
+        network: NetworkMediator = HTTPNetwork(),
+        connectivity: ConnectivityMediator = PathConnectivity()
     ) {
+        self.phaseMachine = phaseMachine
         self.storage = storage
         self.network = network
         self.connectivity = connectivity
         
-        ServiceLocator.shared.register(storage, for: StorageService.self)
-        ServiceLocator.shared.register(network, for: NetworkService.self)
-        
-        setupPipeline()
-        observePipeline()
-        startConnectivityMonitoring()
-        initiateBootSequence()
+        observePhaseChanges()
+        monitorConnectivity()
+        bootstrap()
     }
     
-    // MARK: - Public Interface
-    
-    func handleAttributionData(_ data: [String: Any]) {
+    func ingestAttribution(_ data: [String: Any]) {
         storage.saveAttribution(data)
-        pipeline.dispatch(DataReceivedAction(data: data))
         
         Task {
-            await processFlow()
+            await executeValidation()
         }
     }
     
-    func handleDeeplinkData(_ data: [String: Any]) {
+    func ingestDeeplink(_ data: [String: Any]) {
         storage.saveDeeplink(data)
     }
     
-    func dismissPermissionRequest() {
-        storage.recordPermissionRequest(Date())
+    func rejectPermission() {
+        storage.recordPermissionDismissal(Date())
         showPermissionRequest = false
-        completeActivation()
+        complete()
     }
     
-    func acceptPermissionRequest() {
-        requestNotificationPermission { [weak self] granted in
+    func grantPermission() {
+        requestAuthorization { [weak self] granted in
             Task { @MainActor in
                 guard let self = self else { return }
                 
-                self.storage.savePermissionStatus(granted: granted, denied: !granted)
+                self.storage.updatePermissionState(granted: granted, denied: !granted)
                 
                 if granted {
                     UIApplication.shared.registerForRemoteNotifications()
                 }
                 
                 self.showPermissionRequest = false
-                self.completeActivation()
+                self.complete()
             }
         }
     }
     
-    private func setupPipeline() {
-        pipeline.register(LaunchMiddleware())
-        pipeline.register(ValidationMiddleware())
-        pipeline.register(ResolutionMiddleware())
-        pipeline.register(ActivationMiddleware())
-        pipeline.register(NetworkMiddleware())
-        pipeline.register(TimeoutMiddleware())
-    }
+    // MARK: - Private Setup
     
-    private func observePipeline() {
-        pipeline.$context
+    private func observePhaseChanges() {
+        phaseMachine.$currentPhase
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] context in
-                self?.handleContextChange(context)
+            .sink { [weak self] phase in
+                self?.handlePhaseUpdate(phase)
             }
             .store(in: &subscriptions)
     }
     
-    private func handleContextChange(_ context: AppContext) {
-        guard !isActivated else { return }
+    private func handlePhaseUpdate(_ phase: ApplicationPhase) {
+        guard !sealed else { return }
         
-        switch context {
-        case .idle, .initializing, .authenticating, .validated:
-            displayMode = .loading
+        switch phase {
+        case .idle, .launching, .validating, .verified:
+            renderMode = .loading
             
-        case .operational(let endpoint):
-            targetEndpoint = endpoint
-            displayMode = .active
-            isActivated = true
+        case .running(let url):
+            targetURL = url
+            renderMode = .active
+            sealed = true
+            timeoutWork?.cancel()
             
-        case .suspended:
-            displayMode = .standby
+        case .halted:
+            renderMode = .standby
             
-        case .disconnected:
-            displayMode = .offline
+        case .offline:
+            renderMode = .disconnected
         }
     }
     
-    private func startConnectivityMonitoring() {
-        connectivity.onStatusChange = { [weak self] isConnected in
-            guard let self = self, !self.isActivated else { return }
-            self.pipeline.dispatch(NetworkStatusAction(connected: isConnected))
+    private func monitorConnectivity() {
+        connectivity.onStateChange = { [weak self] connected in
+            guard let self = self, !self.sealed else { return }
+            
+            if connected {
+                self.phaseMachine.enqueue(ReconnectCommand())
+            } else {
+                self.phaseMachine.enqueue(DisconnectCommand())
+            }
         }
         connectivity.start()
     }
     
-    private func initiateBootSequence() {
-        pipeline.dispatch(LaunchAction())
+    private func bootstrap() {
+        phaseMachine.enqueue(LaunchCommand())
         scheduleTimeout()
     }
     
     private func scheduleTimeout() {
         let work = DispatchWorkItem { [weak self] in
-            guard let self = self, !self.isActivated else { return }
-            self.pipeline.dispatch(TimeoutAction())
+            guard let self = self, !self.sealed else { return }
+            self.phaseMachine.enqueue(ExpireCommand())
         }
         
-        timeoutTask = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 30, execute: work)
+        timeoutWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 60, execute: work)
     }
     
-    // MARK: - Flow Processing
+    // MARK: - Validation Flow
     
-    private func processFlow() async {
-        let attribution = storage.getAttribution()
+    private func executeValidation() async {
+        let command = ValidateCommand()
+        
+        if let newPhase = await command.execute(current: phaseMachine.currentPhase, machine: phaseMachine) {
+            phaseMachine.enqueue(ValidateCommand())
+            
+            if newPhase == .verified {
+                await proceedFlow()
+            }
+        }
+    }
+    
+    private func proceedFlow() async {
+        let attribution = storage.loadAttribution()
         
         guard !attribution.isEmpty else {
-            loadFromCache()
+            loadCachedURL()
             return
         }
         
-        if storage.getAppMode() == "Inactive" {
-            pipeline.dispatch(TimeoutAction())
+        if storage.loadStatus() == "Inactive" {
+            phaseMachine.enqueue(ExpireCommand())
             return
         }
         
@@ -177,17 +183,17 @@ final class ApplicationController: ObservableObject {
             return
         }
         
-        if let temp = loadTemporaryEndpoint() {
-            activate(endpoint: temp)
+        if let temp = loadTemporaryURL() {
+            activateURL(temp)
             return
         }
         
-        await resolveEndpoint()
+        await resolveURL()
     }
     
     private func shouldRunFirstLaunch() -> Bool {
         return storage.isFirstLaunch() &&
-               storage.getAttribution()["af_status"] as? String == "Organic"
+               storage.loadAttribution()["af_status"] as? String == "Organic"
     }
     
     private func executeFirstLaunch() async {
@@ -195,10 +201,10 @@ final class ApplicationController: ObservableObject {
         
         do {
             let deviceID = AppsFlyerLib.shared().getAppsFlyerUID()
-            let attribution = try await network.fetchAttribution(deviceID: deviceID)
+            let attribution = try await network.getAttribution(deviceID: deviceID)
             
             var combined = attribution
-            let deeplink = storage.getDeeplink()
+            let deeplink = storage.loadDeeplink()
             deeplink.forEach { key, value in
                 if combined[key] == nil {
                     combined[key] = value
@@ -206,43 +212,43 @@ final class ApplicationController: ObservableObject {
             }
             
             storage.saveAttribution(combined)
-            await resolveEndpoint()
+            await resolveURL()
         } catch {
-            pipeline.dispatch(TimeoutAction())
+            phaseMachine.enqueue(ExpireCommand())
         }
     }
     
-    private func loadTemporaryEndpoint() -> String? {
+    private func loadTemporaryURL() -> String? {
         return UserDefaults.standard.string(forKey: "temp_url")
     }
     
-    private func resolveEndpoint() async {
+    private func resolveURL() async {
         do {
-            let attribution = storage.getAttribution()
-            let endpoint = try await network.resolveEndpoint(attribution: attribution)
+            let attribution = storage.loadAttribution()
+            let url = try await network.getURL(attribution: attribution)
             
-            storage.saveEndpoint(endpoint)
-            storage.setAppMode("Active")
-            storage.markLaunchComplete()
+            storage.cacheURL(url)
+            storage.saveStatus("Active")
+            storage.markFirstLaunchComplete()
             
-            activate(endpoint: endpoint)
+            activateURL(url)
         } catch {
-            loadFromCache()
+            loadCachedURL()
         }
     }
     
-    private func loadFromCache() {
-        if let cached = storage.getCachedEndpoint() {
-            activate(endpoint: cached)
+    private func loadCachedURL() {
+        if let cached = storage.loadCachedURL() {
+            activateURL(cached)
         } else {
-            pipeline.dispatch(TimeoutAction())
+            phaseMachine.enqueue(ExpireCommand())
         }
     }
     
-    private func activate(endpoint: String) {
-        guard !isActivated else { return }
+    private func activateURL(_ url: String) {
+        guard !sealed else { return }
         
-        pipeline.dispatch(EndpointResolvedAction(endpoint: endpoint))
+        phaseMachine.enqueue(ActivateCommand(url: url))
         
         if shouldRequestPermission() {
             showPermissionRequest = true
@@ -254,7 +260,7 @@ final class ApplicationController: ObservableObject {
             return false
         }
         
-        if let lastRequest = storage.getLastPermissionRequest(),
+        if let lastRequest = storage.loadLastPermissionRequest(),
            Date().timeIntervalSince(lastRequest) < 259200 {
             return false
         }
@@ -262,11 +268,11 @@ final class ApplicationController: ObservableObject {
         return true
     }
     
-    private func completeActivation() {
-        // Already handled by pipeline
+    private func complete() {
+        // Already handled by phase machine
     }
     
-    private func requestNotificationPermission(completion: @escaping (Bool) -> Void) {
+    private func requestAuthorization(completion: @escaping (Bool) -> Void) {
         UNUserNotificationCenter.current().requestAuthorization(
             options: [.alert, .sound, .badge]
         ) { granted, _ in
@@ -275,36 +281,61 @@ final class ApplicationController: ObservableObject {
     }
 }
 
-// MARK: - Display Mode
-enum DisplayMode {
+// MARK: - Render Mode
+enum RenderMode {
     case loading
     case active
     case standby
-    case offline
+    case disconnected
 }
 
-// MARK: - Connectivity Service Protocol
-protocol ConnectivityService {
-    var onStatusChange: ((Bool) -> Void)? { get set }
+// MARK: - Storage Mediator Protocol
+protocol StorageMediator {
+    func saveAttribution(_ data: [String: Any])
+    func saveDeeplink(_ data: [String: Any])
+    func loadAttribution() -> [String: Any]
+    func loadDeeplink() -> [String: Any]
+    func cacheURL(_ url: String)
+    func loadCachedURL() -> String?
+    func saveStatus(_ status: String)
+    func loadStatus() -> String?
+    func isFirstLaunch() -> Bool
+    func markFirstLaunchComplete()
+    func recordPermissionDismissal(_ date: Date)
+    func loadLastPermissionRequest() -> Date?
+    func updatePermissionState(granted: Bool, denied: Bool)
+    func wasPermissionGranted() -> Bool
+    func wasPermissionDenied() -> Bool
+}
+
+// MARK: - Network Mediator Protocol
+protocol NetworkMediator {
+    func getAttribution(deviceID: String) async throws -> [String: Any]
+    func getURL(attribution: [String: Any]) async throws -> String
+}
+
+// MARK: - Connectivity Mediator Protocol
+protocol ConnectivityMediator {
+    var onStateChange: ((Bool) -> Void)? { get set }
     func start()
     func stop()
 }
 
-// MARK: - Reachability Service
-final class ReachabilityService: ConnectivityService {
+// MARK: - Path Connectivity
+final class PathConnectivity: ConnectivityMediator {
     
-    private let monitor = NWPathMonitor()
-    var onStatusChange: ((Bool) -> Void)?
+    private let pathMonitor = NWPathMonitor()
+    var onStateChange: ((Bool) -> Void)?
     
     func start() {
-        monitor.pathUpdateHandler = { [weak self] path in
+        pathMonitor.pathUpdateHandler = { [weak self] path in
             let connected = path.status == .satisfied
-            self?.onStatusChange?(connected)
+            self?.onStateChange?(connected)
         }
-        monitor.start(queue: .global(qos: .background))
+        pathMonitor.start(queue: .global(qos: .background))
     }
     
     func stop() {
-        monitor.cancel()
+        pathMonitor.cancel()
     }
 }

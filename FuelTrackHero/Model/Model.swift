@@ -1,6 +1,9 @@
 import Foundation
 import FirebaseDatabase
 import Combine
+import Firebase
+import FirebaseMessaging
+import AppsFlyerLib
 
 struct Refueling: Identifiable, Codable {
     var id: String
@@ -287,137 +290,201 @@ enum ConsumptionUnit: String, Codable, CaseIterable {
     }
 }
 
-enum AppContext: Equatable {
-    case idle
-    case initializing
-    case authenticating
-    case validated
-    case operational(endpoint: String)
-    case suspended
-    case disconnected
+final class LocalStorage: StorageMediator {
     
-    var isTerminal: Bool {
-        switch self {
-        case .operational, .suspended:
-            return true
-        default:
-            return false
+    private let defaults = UserDefaults.standard
+    private var attributionCache: [String: Any] = [:]
+    private var deeplinkCache: [String: Any] = [:]
+    
+    private enum Key {
+        static let url = "cached_endpoint"
+        static let status = "app_status"
+        static let firstLaunch = "launchedBefore"
+        static let permissionRequest = "permission_request_time"
+        static let permissionGranted = "permissions_accepted"
+        static let permissionDenied = "permissions_denied"
+    }
+    
+    func saveAttribution(_ data: [String: Any]) {
+        attributionCache = data
+    }
+    
+    func saveDeeplink(_ data: [String: Any]) {
+        deeplinkCache = data
+    }
+    
+    func loadAttribution() -> [String: Any] {
+        return attributionCache
+    }
+    
+    func loadDeeplink() -> [String: Any] {
+        return deeplinkCache
+    }
+    
+    func cacheURL(_ url: String) {
+        defaults.set(url, forKey: Key.url)
+    }
+    
+    func loadCachedURL() -> String? {
+        return defaults.string(forKey: Key.url)
+    }
+    
+    func saveStatus(_ status: String) {
+        defaults.set(status, forKey: Key.status)
+    }
+    
+    func loadStatus() -> String? {
+        return defaults.string(forKey: Key.status)
+    }
+    
+    func isFirstLaunch() -> Bool {
+        return !defaults.bool(forKey: Key.firstLaunch)
+    }
+    
+    func markFirstLaunchComplete() {
+        defaults.set(true, forKey: Key.firstLaunch)
+    }
+    
+    func recordPermissionDismissal(_ date: Date) {
+        defaults.set(date, forKey: Key.permissionRequest)
+    }
+    
+    func loadLastPermissionRequest() -> Date? {
+        return defaults.object(forKey: Key.permissionRequest) as? Date
+    }
+    
+    func updatePermissionState(granted: Bool, denied: Bool) {
+        defaults.set(granted, forKey: Key.permissionGranted)
+        defaults.set(denied, forKey: Key.permissionDenied)
+    }
+    
+    func wasPermissionGranted() -> Bool {
+        return defaults.bool(forKey: Key.permissionGranted)
+    }
+    
+    func wasPermissionDenied() -> Bool {
+        return defaults.bool(forKey: Key.permissionDenied)
+    }
+}
+
+// MARK: - HTTP Network
+final class HTTPNetwork: NetworkMediator {
+    
+    private let session: URLSession
+    
+    init(session: URLSession = .shared) {
+        self.session = session
+    }
+    
+    func getAttribution(deviceID: String) async throws -> [String: Any] {
+        let url = try buildAttributionURL(deviceID: deviceID)
+        let request = URLRequest(url: url, timeoutInterval: 30)
+        
+        let (data, response) = try await session.data(for: request)
+        try validateHTTPResponse(response)
+        
+        return try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+    }
+    
+    func getURL(attribution: [String: Any]) async throws -> String {
+        let endpoint = URL(string: "https://fueltrackhero.com/config.php")!
+        let payload = buildPayload(from: attribution)
+        let request = try buildPOSTRequest(url: endpoint, payload: payload)
+        
+        let (data, _) = try await session.data(for: request)
+        let json = try JSONSerialization.jsonObject(with: data) as? [String: Any] ?? [:]
+        
+        guard let success = json["ok"] as? Bool, success,
+              let url = json["url"] as? String else {
+            throw NetworkError.invalidResponse
+        }
+        
+        return url
+    }
+    
+    // MARK: - Private Helpers
+    
+    private func buildAttributionURL(deviceID: String) throws -> URL {
+        let base = "https://gcdsdk.appsflyer.com/install_data/v4.0/"
+        let appID = "id\(Config.appsFlyerId)"
+        
+        guard var components = URLComponents(string: base + appID) else {
+            throw NetworkError.badURL
+        }
+        
+        components.queryItems = [
+            URLQueryItem(name: "devkey", value: Config.appsFlyerKey),
+            URLQueryItem(name: "device_id", value: deviceID)
+        ]
+        
+        guard let url = components.url else {
+            throw NetworkError.badURL
+        }
+        
+        return url
+    }
+    
+    private func buildPayload(from data: [String: Any]) -> [String: Any] {
+        var payload = data
+        
+        payload["os"] = "iOS"
+        payload["af_id"] = AppsFlyerLib.shared().getAppsFlyerUID()
+        payload["bundle_id"] = SystemInfo.bundleID
+        payload["firebase_project_id"] = SystemInfo.firebaseProjectID
+        payload["store_id"] = SystemInfo.appStoreID
+        payload["push_token"] = SystemInfo.pushToken
+        payload["locale"] = SystemInfo.localeCode
+        
+        return payload
+    }
+    
+    private func buildPOSTRequest(url: URL, payload: [String: Any]) throws -> URLRequest {
+        var request = URLRequest(url: url, timeoutInterval: 30)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = try JSONSerialization.data(withJSONObject: payload)
+        
+        return request
+    }
+    
+    private func validateHTTPResponse(_ response: URLResponse) throws {
+        guard let http = response as? HTTPURLResponse,
+              (200...299).contains(http.statusCode) else {
+            throw NetworkError.httpError
         }
     }
 }
 
-protocol Action {
-    var timestamp: Date { get }
+// MARK: - Network Error
+enum NetworkError: Error {
+    case badURL
+    case httpError
+    case invalidResponse
 }
 
-// MARK: - Action Types
-struct LaunchAction: Action {
-    let timestamp = Date()
-}
-
-struct DataReceivedAction: Action {
-    let timestamp = Date()
-    let data: [String: Any]
-}
-
-struct ValidationSuccessAction: Action {
-    let timestamp = Date()
-}
-
-struct ValidationFailureAction: Action {
-    let timestamp = Date()
-    let error: Error
-}
-
-struct EndpointResolvedAction: Action {
-    let timestamp = Date()
-    let endpoint: String
-}
-
-struct NetworkStatusAction: Action {
-    let timestamp = Date()
-    let connected: Bool
-}
-
-struct TimeoutAction: Action {
-    let timestamp = Date()
-}
-
-// MARK: - Middleware Protocol
-protocol Middleware {
-    func process(
-        action: Action,
-        context: AppContext,
-        dispatch: @escaping (Action) -> Void
-    ) async -> AppContext?
-}
-
-// MARK: - State Pipeline
-final class StatePipeline {
+// MARK: - System Info
+struct SystemInfo {
     
-    @Published private(set) var context: AppContext = .idle
-    
-    private var middlewares: [Middleware] = []
-    private var isProcessing = false
-    private let queue = DispatchQueue(label: "com.fueltrack.pipeline")
-    
-    func register(_ middleware: Middleware) {
-        middlewares.append(middleware)
+    static var bundleID: String {
+        return "com.ctrackheroapp.FuelTrackHero"
     }
     
-    func dispatch(_ action: Action) {
-        Task {
-            await processAction(action)
+    static var firebaseProjectID: String? {
+        return FirebaseApp.app()?.options.gcmSenderID
+    }
+    
+    static var appStoreID: String {
+        return "id\(Config.appsFlyerId)"
+    }
+    
+    static var pushToken: String? {
+        if let saved = UserDefaults.standard.string(forKey: "push_token") {
+            return saved
         }
+        return Messaging.messaging().fcmToken
     }
     
-    private func processAction(_ action: Action) async {
-        guard !isProcessing else { return }
-        
-        isProcessing = true
-        defer { isProcessing = false }
-        
-        var currentContext = context
-        
-        for middleware in middlewares {
-            if let newContext = await middleware.process(
-                action: action,
-                context: currentContext,
-                dispatch: dispatch
-            ) {
-                currentContext = newContext
-                
-                await MainActor.run {
-                    self.context = currentContext
-                }
-                
-                if currentContext.isTerminal {
-                    break
-                }
-            }
-        }
+    static var localeCode: String {
+        return Locale.preferredLanguages.first?.prefix(2).uppercased() ?? "EN"
     }
-}
-
-protocol StorageService {
-    func saveAttribution(_ data: [String: Any])
-    func saveDeeplink(_ data: [String: Any])
-    func getAttribution() -> [String: Any]
-    func getDeeplink() -> [String: Any]
-    func saveEndpoint(_ endpoint: String)
-    func getCachedEndpoint() -> String?
-    func setAppMode(_ mode: String)
-    func getAppMode() -> String?
-    func isFirstLaunch() -> Bool
-    func markLaunchComplete()
-    func recordPermissionRequest(_ date: Date)
-    func getLastPermissionRequest() -> Date?
-    func savePermissionStatus(granted: Bool, denied: Bool)
-    func wasPermissionGranted() -> Bool
-    func wasPermissionDenied() -> Bool
-}
-
-enum GateError: Error {
-    case accessDenied
-    case invalidData
 }

@@ -4,7 +4,7 @@ import Combine
 struct HeroApplicationView: View {
     
     @EnvironmentObject var appState: AppState
-    @StateObject private var controller = ApplicationController()
+    @StateObject private var controller = ApplicationMediator()
     @State private var eventSubscriptions: Set<AnyCancellable> = []
     
     var body: some View {
@@ -24,12 +24,12 @@ struct HeroApplicationView: View {
     
     @ViewBuilder
     private var mainContent: some View {
-        switch controller.displayMode {
+        switch controller.renderMode {
         case .loading:
             SplashScreen()
             
         case .active:
-            if controller.targetEndpoint != nil {
+            if controller.targetURL != nil {
                 TrackingContentView()
             } else {
                 RootView()
@@ -42,7 +42,7 @@ struct HeroApplicationView: View {
                 .environmentObject(appState)
                 .preferredColorScheme(.dark)
             
-        case .offline:
+        case .disconnected:
             DisconnectedView()
         }
     }
@@ -52,7 +52,7 @@ struct HeroApplicationView: View {
             .publisher(for: Notification.Name("ConversionDataReceived"))
             .compactMap { $0.userInfo?["conversionData"] as? [String: Any] }
             .sink { data in
-                controller.handleAttributionData(data)
+                controller.ingestAttribution(data)
             }
             .store(in: &eventSubscriptions)
         
@@ -60,7 +60,7 @@ struct HeroApplicationView: View {
             .publisher(for: Notification.Name("deeplink_values"))
             .compactMap { $0.userInfo?["deeplinksData"] as? [String: Any] }
             .sink { data in
-                controller.handleDeeplinkData(data)
+                controller.ingestDeeplink(data)
             }
             .store(in: &eventSubscriptions)
     }

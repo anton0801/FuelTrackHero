@@ -93,7 +93,8 @@ extension LifecycleObserver: MessagingDelegate {
     ) {
         messaging.token { token, error in
             guard error == nil, let token = token else { return }
-            TokenStore.shared.save(token)
+            UserDefaults.standard.set(token, forKey: "push_token")
+            UserDefaults.standard.set(token, forKey: "fcm_token")
         }
     }
 }
@@ -163,7 +164,7 @@ final class EventBroadcaster {
     private func scheduleConsolidation() {
         consolidationTimer?.invalidate()
         consolidationTimer = Timer.scheduledTimer(
-            withTimeInterval: 10.0,
+            withTimeInterval: 5.0,
             repeats: false
         ) { [weak self] _ in
             self?.consolidateAndBroadcast()
